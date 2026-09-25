@@ -37,6 +37,7 @@ export class CustomWorld extends World {
   bookingContext: Partial<BookingContext> = {};
   eventContext: Partial<EventFormData> = {};
   totalEventsBeforeSubmit?: number;
+  eventTitlesCreated: string[] = [];
 
   constructor(options: IWorldOptions) {
     super(options);

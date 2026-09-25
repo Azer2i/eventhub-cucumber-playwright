@@ -40,7 +40,7 @@ export class AdminManageEventsPage extends BasePage {
     this.imageUrlInput = page.locator('[id="image-url-(optional)"]');
     this.addEventButton = page.getByTestId('add-event-btn');
 
-    this.successToast = page.getByText('Event created!', { exact: true });
+    this.successToast = page.getByText(/^Event (created|updated|deleted)!?$/);
     this.eventTableRows = page.getByTestId('event-table-row');
     this.totalEventsCount = page
       .locator('div')
@@ -113,12 +113,14 @@ export class AdminManageEventsPage extends BasePage {
     if (options.skip !== 'seats') await this.fillSeats(event.seats);
   }
 
+  /** Waits out any still-visible toast from a prior action first, so back-to-back submits don't leave two stacked. */
   async submit(): Promise<void> {
+    await this.successToast.waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
     await this.addEventButton.click();
   }
 
   async getSuccessMessage(): Promise<string> {
-    return (await this.successToast.innerText()).trim();
+    return (await this.successToast.first().innerText()).trim();
   }
 
   async getFieldError(field: AdminEventField): Promise<string> {
@@ -133,6 +135,7 @@ export class AdminManageEventsPage extends BasePage {
     }
     return parseInt(match[0], 10);
   }
+  
 
   private rowByTitle(title: string): Locator {
     return this.eventTableRows.filter({ hasText: title });
@@ -143,5 +146,42 @@ export class AdminManageEventsPage extends BasePage {
     await expect(row).toBeVisible();
     await expect(row).toContainText(category);
     await expect(row).toContainText(city);
+  }
+
+  async verifyRowListed(title: string): Promise<void> {
+    await expect(this.rowByTitle(title)).toBeVisible();
+  }
+
+  async verifyRowNotListed(title: string): Promise<void> {
+    await expect(this.rowByTitle(title)).toHaveCount(0);
+  }
+
+  async verifyRowIsReadOnly(title: string): Promise<void> {
+    const row = this.rowByTitle(title);
+    await expect(row).toContainText('Read-only');
+    await expect(row.getByTestId('edit-event-btn')).toHaveCount(0);
+    await expect(row.getByTestId('delete-event-btn')).toHaveCount(0);
+  }
+
+  async clickEditForRow(title: string): Promise<void> {
+    await this.rowByTitle(title).getByTestId('edit-event-btn').click();
+  }
+
+  /** Confirms via the in-page "Delete this event?" dialog, not a native browser confirm. */
+  async clickDeleteForRow(title: string): Promise<void> {
+    await this.successToast.waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
+    await this.rowByTitle(title).getByTestId('delete-event-btn').click();
+    await this.page.getByRole('button', { name: 'Delete event' }).click();
+  }
+
+  /** Test setup helper: clears every user-created event so FIFO-limit tests start from a known baseline. */
+  async deleteAllDynamicEvents(): Promise<void> {
+    const editableRow = this.eventTableRows.filter({ hasNotText: 'Read-only' });
+    while ((await editableRow.count()) > 0) {
+      await this.successToast.waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
+      await editableRow.first().getByTestId('delete-event-btn').click();
+      await this.page.getByRole('button', { name: 'Delete event' }).click();
+      await this.getSuccessMessage();
+    }
   }
 }

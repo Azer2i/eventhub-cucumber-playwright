@@ -21,3 +21,12 @@ export function generatePhoneNumber(): string {
   }
   return `+994${digits}`;
 }
+
+const PASSWORD_SPECIAL_CHARACTERS = ['!', '@', '#', '$', '%', '^', '&', '*'];
+
+/** Generates a password meeting the site's requirements: 8+ chars, one uppercase letter, one number, one special character. */
+export function generateRandomPassword(): string {
+  const digits = Math.floor(1000 + Math.random() * 9000);
+  const special = PASSWORD_SPECIAL_CHARACTERS[Math.floor(Math.random() * PASSWORD_SPECIAL_CHARACTERS.length)];
+  return `Qa${digits}${special}pass`;
+}

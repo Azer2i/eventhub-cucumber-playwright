@@ -3,10 +3,12 @@ import { BasePage } from './BasePage';
 
 export class BookingDetailPage extends BasePage {
   readonly eventTitle: Locator;
+  readonly refundEligibilityButton: Locator;
 
   constructor(page: Page) {
     super(page);
     this.eventTitle = page.getByRole('heading', { level: 1 });
+    this.refundEligibilityButton = page.getByRole('button', { name: 'Check eligibility for refund?' });
   }
 
   /** Finds the value span next to a field label span, e.g. "Name", "Email", "Total Paid". */
@@ -32,5 +34,26 @@ export class BookingDetailPage extends BasePage {
   async getTotalPaid(): Promise<number> {
     const text = await this.fieldValue('Total Paid').innerText();
     return this.parsePrice(text);
+  }
+
+  async clickCheckRefundEligibility(): Promise<void> {
+    await this.refundEligibilityButton.click();
+  }
+
+  /**
+   * A ~4s spinner precedes the result, so this waits well past it instead of a fixed delay. Not an exact match:
+   * the bold "Eligible..." prefix and this sentence are both plain text inside the same parent, so no single
+   * element's full text equals just this sentence.
+   */
+  async verifyEligibleForRefund(): Promise<void> {
+    await expect(this.page.getByText('Single-ticket bookings qualify for a full refund.')).toBeVisible({
+      timeout: 8000,
+    });
+  }
+
+  async verifyNotEligibleForRefund(ticketCount: number): Promise<void> {
+    await expect(this.page.getByText(`Group bookings (${ticketCount} tickets) are non-refundable.`)).toBeVisible({
+      timeout: 8000,
+    });
   }
 }

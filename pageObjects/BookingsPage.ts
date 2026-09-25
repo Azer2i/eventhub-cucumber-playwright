@@ -26,4 +26,14 @@ export class BookingsPage extends BasePage {
   async openBookingDetails(reference: string): Promise<void> {
     await this.cardByReference(reference).getByRole('link', { name: 'View Details' }).click();
   }
+
+  /** Confirms via the in-page "Cancel this booking?" dialog, not a native browser confirm. */
+  async cancelBooking(reference: string): Promise<void> {
+    await this.cardByReference(reference).getByTestId('cancel-booking-btn').click();
+    await this.page.getByRole('button', { name: 'Yes, cancel it' }).click();
+  }
+
+  async verifyBookingNotListed(reference: string): Promise<void> {
+    await expect(this.cardByReference(reference)).toHaveCount(0);
+  }
 }

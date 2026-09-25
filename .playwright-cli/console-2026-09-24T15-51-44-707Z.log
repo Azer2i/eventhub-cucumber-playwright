@@ -1,2 +1,0 @@
-[ 5044129ms] [ERROR] Failed to load resource: net::ERR_INTERNET_DISCONNECTED @ https://api.eventhub.rahulshettyacademy.com/api/events/6637:0
-[ 5045141ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://api.eventhub.rahulshettyacademy.com/api/events/6637:0

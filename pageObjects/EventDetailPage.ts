@@ -1,6 +1,8 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
 
+export type CustomerField = 'name' | 'email' | 'phone';
+
 export class EventDetailPage extends BasePage {
   readonly eventTitle: Locator;
   readonly increaseTicketsButton: Locator;
@@ -13,6 +15,8 @@ export class EventDetailPage extends BasePage {
   readonly bookingRef: Locator;
   readonly viewMyBookingsLink: Locator;
 
+  private readonly customerFieldErrors: Record<CustomerField, Locator>;
+
   constructor(page: Page) {
     super(page);
     this.eventTitle = page.getByRole('heading', { level: 1 });
@@ -21,6 +25,12 @@ export class EventDetailPage extends BasePage {
     this.customerNameInput = page.locator('#customerName');
     this.customerEmailInput = page.locator('#customer-email');
     this.phoneInput = page.locator('#phone');
+
+    this.customerFieldErrors = {
+      name: page.locator('div:has(> #customerName) p'),
+      email: page.locator('div:has(> #customer-email) p'),
+      phone: page.locator('div:has(> #phone) p'),
+    };
     // The "Total" row in the price summary box: a div containing a "Total" label span and an amount span.
     this.totalAmount = page
       .locator('div')
@@ -93,5 +103,19 @@ export class EventDetailPage extends BasePage {
 
   async clickViewMyBookings(): Promise<void> {
     await this.viewMyBookingsLink.click();
+  }
+
+  async getCustomerFieldError(field: CustomerField): Promise<string> {
+    return (await this.customerFieldErrors[field].innerText()).trim();
+  }
+
+  /** Clicks "+" past the max, since the button disables itself rather than the count simply stopping. */
+  async verifyTicketCountCapped(max: number): Promise<void> {
+    for (let i = 0; i < max + 2; i++) {
+      if (await this.increaseTicketsButton.isDisabled()) break;
+      await this.increaseTicketsButton.click();
+    }
+    await expect(this.ticketCount).toHaveText(String(max));
+    await expect(this.increaseTicketsButton).toBeDisabled();
   }
 }

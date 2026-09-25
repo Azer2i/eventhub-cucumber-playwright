@@ -65,3 +65,78 @@ Then(
     await this.eventDetailPage.verifyDescription(event.description);
   }
 );
+
+Then('the {string} event row should be read-only', async function (this: CustomWorld, title: string) {
+  await this.adminManageEventsPage.verifyRowIsReadOnly(title);
+});
+
+When('the user edits that event\'s city to {string}', async function (this: CustomWorld, city: string) {
+  const event = this.eventContext as EventFormData;
+  await this.adminManageEventsPage.clickEditForRow(event.title);
+  await this.adminManageEventsPage.fillCity(city);
+  await this.adminManageEventsPage.submit();
+});
+
+Then('that event\'s row should show the updated city {string}', async function (this: CustomWorld, city: string) {
+  const event = this.eventContext as EventFormData;
+  await this.adminManageEventsPage.verifyEventListed(event.title, event.category, city);
+});
+
+When('a ticket is booked for that event', async function (this: CustomWorld) {
+  const event = this.eventContext as EventFormData;
+
+  await this.eventsPage.goto();
+  await this.eventsPage.searchByTitle(event.title);
+  await this.eventsPage.openEventByTitle(event.title);
+  await this.eventDetailPage.fillCustomerDetails('Cascade Tester', 'cascade.tester@example.com', '+994500000001');
+  await this.eventDetailPage.clickConfirmBooking();
+  this.bookingContext.bookingReference = await this.eventDetailPage.getBookingReference();
+
+  await this.adminManageEventsPage.open();
+});
+
+When('the user deletes that event', async function (this: CustomWorld) {
+  const event = this.eventContext as EventFormData;
+  await this.adminManageEventsPage.clickDeleteForRow(event.title);
+});
+
+Then('that event\'s row should no longer be listed', async function (this: CustomWorld) {
+  const event = this.eventContext as EventFormData;
+  await this.adminManageEventsPage.verifyRowNotListed(event.title);
+});
+
+Then('that event\'s booking should no longer be listed', async function (this: CustomWorld) {
+  await this.bookingsPage.goto();
+  await this.bookingsPage.verifyBookingNotListed(this.bookingContext.bookingReference!);
+});
+
+Given('all dynamic events are deleted', async function (this: CustomWorld) {
+  await this.adminManageEventsPage.deleteAllDynamicEvents();
+});
+
+When('the user creates {int} random events one after another', async function (this: CustomWorld, count: number) {
+  this.eventTitlesCreated = [];
+  for (let i = 0; i < count; i++) {
+    const eventData = generateEventData();
+    this.eventTitlesCreated.push(eventData.title);
+    await this.adminManageEventsPage.fillAllFields(eventData);
+    await this.adminManageEventsPage.submit();
+    await this.adminManageEventsPage.getSuccessMessage();
+  }
+});
+
+Then('the oldest of those events should no longer be listed', async function (this: CustomWorld) {
+  await this.adminManageEventsPage.verifyRowNotListed(this.eventTitlesCreated[0]);
+});
+
+Then('the other {int} of those events should still be listed', async function (this: CustomWorld, count: number) {
+  const stillListed = this.eventTitlesCreated.slice(this.eventTitlesCreated.length - count);
+  for (const title of stillListed) {
+    await this.adminManageEventsPage.verifyRowListed(title);
+  }
+});
+
+Then('the total events count should be {int}', async function (this: CustomWorld, expectedTotal: number) {
+  const total = await this.adminManageEventsPage.getTotalEventsCount();
+  expect(total).toBe(expectedTotal);
+});
